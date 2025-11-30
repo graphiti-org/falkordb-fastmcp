@@ -186,26 +186,35 @@ c0976d0 Initial commit (baseline)
 
 ## Commands to Create PR
 
+### Current Branch
+```
+Branch: feature/validation-framework-and-bug-001-fix
+Base: main
+```
+
 ### Option 1: GitHub CLI (Recommended)
 
 ```bash
-# Push commits
-git push origin main
+# Push feature branch to remote
+git push -u origin feature/validation-framework-and-bug-001-fix
 
-# Create PR with description
-gh pr create --title "Validation Framework & BUG-001 Fix" --body-file PULL_REQUEST.md
+# Create PR from feature branch to main
+gh pr create --base main --head feature/validation-framework-and-bug-001-fix \
+  --title "Validation Framework & BUG-001 Fix" \
+  --body-file PULL_REQUEST.md
 ```
 
 ### Option 2: Manual PR Creation
 
 ```bash
-# Push commits
-git push origin main
+# Push feature branch to remote
+git push -u origin feature/validation-framework-and-bug-001-fix
 
 # Then go to GitHub web interface and:
 # 1. Click "New Pull Request"
-# 2. Copy content from PULL_REQUEST.md into description
-# 3. Create PR
+# 2. Select base: main, compare: feature/validation-framework-and-bug-001-fix
+# 3. Copy content from PULL_REQUEST.md into description
+# 4. Create PR
 ```
 
 ---
