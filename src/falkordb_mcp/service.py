@@ -95,7 +95,9 @@ class FalkorDBService:
             graph_name: Name of the graph
 
         Returns:
-            Dictionary containing graph metadata
+            Dictionary containing graph metadata with:
+                - name: Graph name
+                - labels: List of node label strings
 
         Raises:
             Exception: If metadata retrieval fails
@@ -105,12 +107,19 @@ class FalkorDBService:
             # Execute a simple query to get graph statistics
             labels_result = graph.query("CALL db.labels()")
 
+            # Extract data from QueryResult object for JSON serialization
+            # FalkorDB query results must be accessed via .result_set property
+            labels_list = []
+            if labels_result.result_set:
+                labels_list = [row[0] for row in labels_result.result_set]
+
             return {
                 "name": graph_name,
-                "labels": labels_result,
+                "labels": labels_list,
             }
         except Exception as e:
-            logger.error(f"Error getting metadata for graph '{graph_name}': {e}")
+            sanitized = graph_name.replace("\n", "").replace("\r", "")
+            logger.error(f"Error getting metadata for graph '{sanitized}': {e}")
             raise
 
     def close(self) -> None:
