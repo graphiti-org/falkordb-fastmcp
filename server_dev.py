@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 from falkordb import FalkorDB
+from falkordb.node import Node
+from falkordb.edge import Edge
 from fastmcp import FastMCP
 
 # Load environment variables
@@ -24,6 +26,40 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def _serialize_value(value: Any) -> Any:
+    """Serialize FalkorDB objects to JSON-compatible types.
+
+    Args:
+        value: Value to serialize (may be Node, Edge, or primitive)
+
+    Returns:
+        JSON-serializable value
+    """
+    if isinstance(value, Node):
+        return {
+            "type": "node",
+            "id": value.id,
+            "labels": list(value.labels),
+            "properties": dict(value.properties)
+        }
+    elif isinstance(value, Edge):
+        return {
+            "type": "edge",
+            "id": value.id,
+            "relation": value.relation,
+            "src_node": value.src_node,
+            "dest_node": value.dest_node,
+            "properties": dict(value.properties)
+        }
+    elif isinstance(value, (list, tuple)):
+        return [_serialize_value(v) for v in value]
+    elif isinstance(value, dict):
+        return {k: _serialize_value(v) for k, v in value.items()}
+    else:
+        # Primitive types (int, str, float, bool, None)
+        return value
 
 
 # Configuration
@@ -84,12 +120,35 @@ class FalkorDBService:
 
     def execute_query(
         self, graph_name: str, query: str, params: Optional[Dict[str, Any]] = None
-    ) -> Any:
+    ) -> Dict[str, Any]:
         """Execute a Cypher query against a FalkorDB graph."""
         try:
             graph = self.client.select_graph(graph_name)
             result = graph.query(query, params or {})
-            return result
+
+            # Extract data from QueryResult object for JSON serialization
+            data = []
+            if result.result_set:
+                data = [list(row) for row in result.result_set]
+
+            # Include column headers if available
+            headers = []
+            if hasattr(result, 'header') and result.header:
+                headers = result.header
+
+            return {
+                "result_set": data,
+                "headers": headers,
+                "statistics": {
+                    "nodes_created": getattr(result, 'nodes_created', 0),
+                    "nodes_deleted": getattr(result, 'nodes_deleted', 0),
+                    "relationships_created": getattr(result, 'relationships_created', 0),
+                    "relationships_deleted": getattr(result, 'relationships_deleted', 0),
+                    "properties_set": getattr(result, 'properties_set', 0),
+                    "labels_added": getattr(result, 'labels_added', 0),
+                    "labels_removed": getattr(result, 'labels_removed', 0),
+                }
+            }
         except Exception as e:
             sanitized_graph = graph_name.replace("\n", "").replace("\r", "")
             logger.error(f"Error executing query on graph '{sanitized_graph}': {e}")
